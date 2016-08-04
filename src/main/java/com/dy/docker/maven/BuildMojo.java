@@ -5,10 +5,10 @@ import com.spotify.docker.client.DefaultDockerClient;
 import com.spotify.docker.client.DockerClient;
 import com.spotify.docker.client.exceptions.DockerException;
 import org.apache.maven.model.Resource;
-import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
@@ -25,36 +25,36 @@ import java.util.List;
  *
  * Created by yidong on 7/13/2016.
  */
-public class DockerMojo extends AbstractMojo {
+public class BuildMojo extends AMojo {
     /**
      * @parameter expression="${project.build.directory}"
      */
-    protected String buildDirectory;
+    protected String buildDirectory = null;
 
     /**
      * @parameter
      */
-    private String imageName;
+    private String baseImage = null;
 
     /**
      * @parameter
      */
-    private String baseImage;
+    private String executor = null;
 
     /**
      * @parameter
      */
-    private String executor;
+    private String main = null;
 
     /**
      * @parameter
      */
-    private List<Resource> resources;
+    private List<Resource> resources = null;
 
     /**
      * @parameter
      */
-    private String libDirectory;
+    private String libDirectory = null;
 
     /**
      * @parameter
@@ -67,27 +67,31 @@ public class DockerMojo extends AbstractMojo {
     private boolean noCache = true;
 
     public void execute() throws MojoExecutionException, MojoFailureException {
-        if (imageName == null || baseImage == null || executor == null)
+        if (hosts == null || imageName == null || baseImage == null || executor == null || main == null)
             throw new MojoFailureException("Required Parameter is not provided!");
+        log("hosts:" + hosts);
         log("buildDirectory:" + buildDirectory);
         log("libDirectory:" + libDirectory);
         log("baseImage:" + baseImage);
         log("imageName:" + imageName);
         log("executor:" + executor);
+        log("main:" + main);
         log("pullOnBuild:" + pullOnBuild);
         log("noCache:" + noCache);
         for (Resource resource : resources) {
             log("resource:" + resource.toString());
         }
 
-        DockerClient client = new DefaultDockerClient("http://localhost:2375");
-        try {
-            copyResources();
-            createDockerFile();
-            client.build(Paths.get(getDestination()), imageName, new AnsiProgressHandler(), buildParams());
-        } catch (DockerException | InterruptedException | IOException e) {
-            error(e);
-            throw new MojoExecutionException(e.getMessage());
+        for (String h : getHosts()) {
+            DockerClient client = new DefaultDockerClient(getDaemonEndPoint(h));
+            try {
+                copyResources();
+                createDockerFile();
+                client.build(Paths.get(getDestination()), imageName, new AnsiProgressHandler(), buildParams());
+            } catch (DockerException | InterruptedException | IOException e) {
+                error(e);
+                throw new MojoExecutionException(e.getMessage());
+            }
         }
     }
 
@@ -102,12 +106,25 @@ public class DockerMojo extends AbstractMojo {
         Files.createDirectories(Paths.get(getDestination(), "lib"));
         for (Resource r : resources) {
             List<String> includes = r.getIncludes();
-            for (String i : includes) {
-                Path dest = Paths.get(getDestination(), targetLib).resolve(i);
-                Files.copy(Paths.get(r.getDirectory()).resolve(i), dest, StandardCopyOption.REPLACE_EXISTING,
-                        StandardCopyOption.COPY_ATTRIBUTES);
+            if (includes != null && !includes.isEmpty()) {
+                for (String i : includes) {
+                    doCopyResource(r, targetLib, i);
+                }
+            } else {
+                File f = new File(r.getDirectory());
+                for (String s : f.list()) {
+                    doCopyResource(r, targetLib, s);
+                }
             }
         }
+    }
+
+    private void doCopyResource(Resource r, String targetLib, String resourceFile) throws IOException {
+        Path dest = Paths.get(getDestination(), targetLib).resolve(resourceFile);
+        Path src = Paths.get(r.getDirectory()).resolve(resourceFile);
+        Files.copy(src, dest, StandardCopyOption.REPLACE_EXISTING,
+                StandardCopyOption.COPY_ATTRIBUTES);
+        debug("Copy Resource:" + src + " -> " + dest);
     }
 
     private void createDockerFile()
@@ -122,7 +139,9 @@ public class DockerMojo extends AbstractMojo {
         }
         commands.add("COPY ./lib /lib/");
         String[] strs = executor.split("/");
-        commands.add("ENTRYPOINT [\"java\", \"-jar\", \"/lib/" + strs[strs.length - 1] + "\"]");
+        commands.add("WORKDIR .");
+        commands.add("ENTRYPOINT [\"java\", \"-cp\", \"/lib/" + strs[strs.length - 1] + ":/lib/*\"," + " \"" + main + "\"]");
+        //commands.add("ENTRYPOINT [\"java\", \"-jar\", \"/lib/" + strs[strs.length - 1] + "\"]");
 
         log("Writing Dockerfile...");
         // this will overwrite an existing file
@@ -141,11 +160,4 @@ public class DockerMojo extends AbstractMojo {
         return buildParams.toArray(new DockerClient.BuildParam[buildParams.size()]);
     }
 
-    private void log(String str) {
-        getLog().info(str);
-    }
-
-    private void error(Throwable e) {
-        getLog().error(e);
-    }
 }
