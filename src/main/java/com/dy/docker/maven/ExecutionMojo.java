@@ -1,6 +1,5 @@
 package com.dy.docker.maven;
 
-import com.spotify.docker.client.AnsiProgressHandler;
 import com.spotify.docker.client.DefaultDockerClient;
 import com.spotify.docker.client.DockerClient;
 import com.spotify.docker.client.exceptions.DockerException;
@@ -8,8 +7,6 @@ import com.spotify.docker.client.messages.*;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 
-import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +32,11 @@ public class ExecutionMojo extends AMojo {
     /**
      * @parameter
      */
+    private String volumeMapper = null;
+
+    /**
+     * @parameter
+     */
     private boolean bStartNow = true;
 
     @Override
@@ -52,8 +54,10 @@ public class ExecutionMojo extends AMojo {
                 hostPorts.add(PortBinding.of("0.0.0.0", port));
                 portBindings.put(port, hostPorts);
             }
-
-            final HostConfig hostConfig = HostConfig.builder().portBindings(portBindings).build();
+            final HostConfig.Builder builder = HostConfig.builder().portBindings(portBindings);
+            if (volumeMapper != null)
+                builder.binds(volumeMapper);
+            final HostConfig hostConfig = builder.build();
             try {
                 final ContainerConfig containerConfig = ContainerConfig.builder()
                         .hostConfig(hostConfig)
