@@ -5,7 +5,6 @@ Docklize java app and deploy to remote docker daemon.
 Comparing with spotify docker maven plugin, this also provides:
 - Multiple endpoints.
 - No AUFS 127 layer limitation.
-- Alternative way for docker-compose
  
 ##Example
 ```xml
