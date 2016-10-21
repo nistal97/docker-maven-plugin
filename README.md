@@ -1,11 +1,11 @@
 # docker-maven-plugin
 
 ##Purpose
-Build, Deploy and manage docker image to remote docker daemon. It is target for java app only for now.   
-Comparing with popular maven plugins like spotify, this also provides:   
-- Easy config with endpoints.
-- Resource copy has no 120 layer limitation.
-- Create/Start container by either native or docker-compose 
+Docklize java app and deploy to remote docker daemon.
+Comparing with spotify docker maven plugin, this also provides:
+- Multiple endpoints.
+- No AUFS 127 layer limitation.
+- Alternative way for docker-compose
  
 ##Example
 ```xml
