@@ -3,7 +3,8 @@
 ##Purpose
 Easy docklize java app and deploy to remote docker daemon.
 Based on spotify docker maven plugin, this plugin provides:
-- Multiple endpoints.
+- Multiple endpoints support.
+
 And AVOIDS
 - AUFS 127 layer limitation.
  
