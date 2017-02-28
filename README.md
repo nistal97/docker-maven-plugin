@@ -1,10 +1,11 @@
 # docker-maven-plugin
 
 ##Purpose
-Docklize java app and deploy to remote docker daemon.
-Comparing with spotify docker maven plugin, this also provides:
+Easy docklize java app and deploy to remote docker daemon.
+Based on spotify docker maven plugin, this plugin provides:
 - Multiple endpoints.
-- No AUFS 127 layer limitation.
+And AVOIDS
+- AUFS 127 layer limitation.
  
 ##Example
 ```xml
