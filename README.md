@@ -22,7 +22,7 @@ And AVOIDS
                  <goal>exec</goal>
              </goals>
              <configuration>
-                 <hosts>localhost</hosts>
+                 <hosts>localhost,192.168.1.255</hosts>
                  <bindedPorts>8080</bindedPorts>
                  <baseImage>nimmis/java:openjdk-8-jre</baseImage>
                  <imageName>sampleImage</imageName>
