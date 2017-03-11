@@ -85,18 +85,13 @@ public class BuildMojo extends AMojo {
         try {
             copyResources();
             createDockerFile();
-        } catch (IOException e) {
+            for (String h : getHosts()) {
+                DockerClient client = new DefaultDockerClient(getDaemonEndPoint(h));
+                client.build(Paths.get(getDestination()), imageName, new AnsiProgressHandler(), buildParams());
+            }
+        } catch (DockerException | InterruptedException | IOException e) {
             error(e);
             throw new MojoExecutionException(e.getMessage());
-        }
-        for (String h : getHosts()) {
-            DockerClient client = new DefaultDockerClient(getDaemonEndPoint(h));
-            try {
-                client.build(Paths.get(getDestination()), imageName, new AnsiProgressHandler(), buildParams());
-            } catch (DockerException | InterruptedException | IOException e) {
-                error(e);
-                throw new MojoExecutionException(e.getMessage());
-            }
         }
     }
 
