@@ -66,9 +66,14 @@ public class BuildMojo extends AMojo {
      */
     private boolean noCache = true;
 
+
+
     public void execute() throws MojoExecutionException, MojoFailureException {
-        if (hosts == null || imageName == null || baseImage == null || executor == null || main == null)
+        if (bSkip == null || hosts == null || imageName == null || baseImage == null || executor == null || main == null)
             throw new MojoFailureException("Required Parameter is not provided!");
+        log("bSkip:" + bSkip);
+        if (bSkip)
+            return;
         log("hosts:" + hosts);
         log("buildDirectory:" + buildDirectory);
         log("libDirectory:" + libDirectory);
@@ -81,7 +86,6 @@ public class BuildMojo extends AMojo {
         for (Resource resource : resources) {
             log("resource:" + resource.toString());
         }
-
         try {
             copyResources();
             createDockerFile();

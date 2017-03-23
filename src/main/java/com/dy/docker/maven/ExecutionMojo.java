@@ -14,11 +14,13 @@ import java.util.Map;
 
 /**
  * @goal exec
- * @phase package
+ * @phase install
  *
  * Created by yidong on 8/4/2016.
  */
 public class ExecutionMojo extends AMojo {
+    private static final int SECONDS_WAIT_BEFORE_KILLING = 5;
+
     /**
      * @parameter
      */
@@ -37,45 +39,65 @@ public class ExecutionMojo extends AMojo {
     /**
      * @parameter
      */
-    private boolean bStartNow = true;
+    private int doStartThen1Stop0 = 0;
+
+    /**
+     * @parameter
+     */
+    private String containerId = null;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        if (hosts == null)
+        if (hosts == null || bSkip == null)
             throw new MojoFailureException("Required Parameter is not provided!");
         for (String h : getHosts()) {
             log("host==:" + h);
             DockerClient client = new DefaultDockerClient(getDaemonEndPoint(h));
 
-            // Bind container ports to host ports
-            final Map<String, List<PortBinding>> portBindings = new HashMap();
-            for (String port : getBindedPorts()) {
-                List<PortBinding> hostPorts = new ArrayList<PortBinding>();
-                hostPorts.add(PortBinding.of("0.0.0.0", port));
-                portBindings.put(port, hostPorts);
-            }
-            final HostConfig.Builder builder = HostConfig.builder().portBindings(portBindings);
-            if (volumeMapper != null)
-                builder.binds(volumeMapper);
-            final HostConfig hostConfig = builder.build();
-            try {
-                final ContainerConfig containerConfig = ContainerConfig.builder()
-                        .hostConfig(hostConfig)
-                        .image(imageName).exposedPorts(getBindedPorts())
-                        .cmd("sh", "-c", "while :; do sleep 1; done")
-                        .build();
-                final ContainerCreation creation = client.createContainer(containerConfig);
-                final String id = creation.id();
+            if (doStartThen1Stop0 == 0) {
+                if (containerId == null) {
+                    throw new MojoExecutionException("containerId not provided");
+                }
+                try {
+                    client.stopContainer(containerId, SECONDS_WAIT_BEFORE_KILLING);
+                } catch (DockerException | InterruptedException e) {
+                    error(e);
+                    throw new MojoExecutionException(e.getMessage());
+                }
+            } else {
+                // Bind container ports to host ports
+                final Map<String, List<PortBinding>> portBindings = new HashMap();
+                for (String port : getBindedPorts()) {
+                    List<PortBinding> hostPorts = new ArrayList<PortBinding>();
+                    hostPorts.add(PortBinding.of("0.0.0.0", port));
+                    portBindings.put(port, hostPorts);
+                }
+                final HostConfig.Builder builder = HostConfig.builder().portBindings(portBindings);
+                if (volumeMapper != null)
+                    builder.binds(volumeMapper);
+                final HostConfig hostConfig = builder.build();
+                try {
+                    final ContainerConfig containerConfig = ContainerConfig.builder()
+                            .hostConfig(hostConfig)
+                            .image(imageName).exposedPorts(getBindedPorts())
+                            //.cmd("/bin/bash")
+                            .cmd("sh", "-c", "while :; do sleep 1; done")
+                            .build();
+                    final ContainerCreation creation = client.createContainer(containerConfig);
+                    final String id = creation.id();
 
-                // Inspect container
-                final ContainerInfo info = client.inspectContainer(id);
-                log(info.toString());
+                    // Inspect container
+                    final ContainerInfo info = client.inspectContainer(id);
+                    log(info.toString());
 
-                if (bStartNow)
-                    client.startContainer(id);
-            } catch (DockerException | InterruptedException e) {
-                error(e);
-                throw new MojoExecutionException(e.getMessage());
+                    if (doStartThen1Stop0 == 1)
+                        client.startContainer(id);
+                    else
+                        client.stopContainer(id, SECONDS_WAIT_BEFORE_KILLING);
+                } catch (DockerException | InterruptedException e) {
+                    error(e);
+                    throw new MojoExecutionException(e.getMessage());
+                }
             }
         }
     }

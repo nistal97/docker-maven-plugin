@@ -18,6 +18,11 @@ public abstract class AMojo extends AbstractMojo {
      */
     protected String imageName = null;
 
+    /**
+     * @parameter
+     */
+    protected Boolean bSkip = false;
+
     protected final void log(String str) {
         getLog().info(str);
     }
