@@ -50,6 +50,9 @@ public class ExecutionMojo extends AMojo {
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (hosts == null || bSkip == null)
             throw new MojoFailureException("Required Parameter is not provided!");
+        log("bSkip:" + bSkip);
+        if (bSkip)
+            return;
         for (String h : getHosts()) {
             log("host==:" + h);
             DockerClient client = new DefaultDockerClient(getDaemonEndPoint(h));
