@@ -8,9 +8,7 @@ import org.apache.maven.model.Resource;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -49,6 +47,11 @@ public class BuildMojo extends AMojo {
     /**
      * @parameter
      */
+    private String dockerFileFragmentPath = null;
+
+    /**
+     * @parameter
+     */
     private List<Resource> resources = null;
 
     /**
@@ -66,8 +69,6 @@ public class BuildMojo extends AMojo {
      */
     private boolean noCache = true;
 
-
-
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (bSkip == null || hosts == null || imageName == null || baseImage == null || executor == null || main == null)
             throw new MojoFailureException("Required Parameter is not provided!");
@@ -79,6 +80,7 @@ public class BuildMojo extends AMojo {
         log("libDirectory:" + libDirectory);
         log("baseImage:" + baseImage);
         log("imageName:" + imageName);
+        log("dockerFileFragmentPath:" + dockerFileFragmentPath);
         log("executor:" + executor);
         log("main:" + main);
         log("pullOnBuild:" + pullOnBuild);
@@ -91,6 +93,11 @@ public class BuildMojo extends AMojo {
             createDockerFile();
             for (String h : getHosts()) {
                 DockerClient client = new DefaultDockerClient(getDaemonEndPoint(h));
+                try {
+                    client.removeImage(imageName, true, true);
+                } catch (Exception e) {
+                    warn(e.getMessage());
+                }
                 client.build(Paths.get(getDestination()), imageName, new AnsiProgressHandler(), buildParams());
             }
         } catch (DockerException | InterruptedException | IOException e) {
@@ -131,13 +138,31 @@ public class BuildMojo extends AMojo {
         debug("Copy Resource:" + src + " -> " + dest);
     }
 
-    private void createDockerFile()
-            throws IOException {
+    private List<String> getDockerfileFragments(String dockerFileFragment) throws IOException {
+        List<String> buf = new ArrayList();
+        try (FileReader fw = new FileReader(dockerFileFragment);
+             BufferedReader fr = new BufferedReader(fw)) {
+            String line = null;
+            while ((line = fr.readLine()) != null) {
+                if (!line.isEmpty())
+                    buf.add(line);
+            }
+        }
+        return buf;
+    }
+
+    private void createDockerFile() throws IOException {
         final List<String> commands = new ArrayList();
         if (baseImage != null) {
             commands.add("FROM " + baseImage);
         }
-        commands.add("MAINTAINER Dong Yi");
+        commands.add("MAINTAINER Dong Yi <nistal97@hotmail.com>");
+
+        if (dockerFileFragmentPath != null) {
+            for (String cmd : getDockerfileFragments(dockerFileFragmentPath))
+                commands.add(cmd);
+        }
+
         if (libDirectory != null) {
             commands.add(String.format("COPY %s /lib/", libDirectory));
         }
@@ -147,7 +172,10 @@ public class BuildMojo extends AMojo {
         commands.add("ENTRYPOINT [\"java\", \"-cp\", \"/lib/" + strs[strs.length - 1] + ":/lib/*\"," + " \"" + main + "\"]");
         //commands.add("ENTRYPOINT [\"java\", \"-jar\", \"/lib/" + strs[strs.length - 1] + "\"]");
 
-        log("Writing Dockerfile...");
+        StringBuilder sb = new StringBuilder("Writing Dockerfile...");
+        for (String cmd : commands)
+            sb.append(cmd).append("\n");
+        log(sb.toString());
         // this will overwrite an existing file
         Files.write(Paths.get(getDestination(), "Dockerfile"), commands, StandardCharsets.UTF_8);
     }

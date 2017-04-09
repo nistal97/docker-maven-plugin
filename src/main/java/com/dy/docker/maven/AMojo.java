@@ -31,6 +31,10 @@ public abstract class AMojo extends AbstractMojo {
         getLog().debug(str);
     }
 
+    protected final void warn(String str) {
+        getLog().warn(str);
+    }
+
     protected final void error(Throwable e) {
         getLog().error(e);
     }
