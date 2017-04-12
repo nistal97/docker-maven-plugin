@@ -5,6 +5,7 @@ Value addon for spotify docker plugin:
 - Multiple endpoints support.
 - Lifecycle management
 - Avoid 127 layer limitation when copying dependencies in AUFS
+- provide dockerfile fragment to combine with configured baseImage
 
 ## Example
 ```xml
@@ -24,6 +25,7 @@ Value addon for spotify docker plugin:
                     <hosts>localhost</hosts>
                     <baseImage>nimmis/java:openjdk-8-jre</baseImage>
                     <imageName>${project.artifactId}</imageName>
+                    <dockerFileFragmentPath>${project.build.directory}/../src/main/resources/my_Dockerfile</dockerFileFragmentPath>
                     <executor>${project.build.finalName}.jar</executor>
                     <main>com.dy.mercury.MercuryPlatform</main>
                     <resources>
