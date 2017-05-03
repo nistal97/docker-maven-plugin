@@ -51,6 +51,8 @@ Value addon for spotify docker plugin:
                     <imageName>${project.artifactId}</imageName>
                     <bindedPorts>7777</bindedPorts>
                     <containerId>31534e42cd48</containerId>
+                    <memory>1024</memory>
+                    <java_opts>-Xmx1024m</java_opts>
                     <doStartThen1Stop0>0</doStartThen1Stop0>
                 </configuration>
             </execution>

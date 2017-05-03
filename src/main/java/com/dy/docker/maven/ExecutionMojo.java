@@ -46,6 +46,16 @@ public class ExecutionMojo extends AMojo {
      */
     private String containerId = null;
 
+    /**
+     * @parameter
+     */
+    private long memory = 0L;
+
+    /**
+     * @parameter
+     */
+    private String java_opts = null;
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (hosts == null || bSkip == null)
@@ -76,6 +86,8 @@ public class ExecutionMojo extends AMojo {
                     portBindings.put(port, hostPorts);
                 }
                 final HostConfig.Builder builder = HostConfig.builder().portBindings(portBindings);
+                if (memory > 0)
+                    builder.memory(memory * 1024 * 1024);
                 if (volumeMapper != null)
                     builder.binds(volumeMapper);
                 final HostConfig hostConfig = builder.build();
@@ -83,6 +95,7 @@ public class ExecutionMojo extends AMojo {
                     final ContainerConfig containerConfig = ContainerConfig.builder()
                             .hostConfig(hostConfig)
                             .image(imageName).exposedPorts(getBindedPorts())
+                            .env("JAVA_OPTS='" + java_opts + "'")
                             //.cmd("/bin/bash")
                             .cmd("sh", "-c", "while :; do sleep 1; done")
                             .build();
