@@ -92,13 +92,18 @@ public class ExecutionMojo extends AMojo {
                     builder.binds(volumeMapper);
                 final HostConfig hostConfig = builder.build();
                 try {
-                    final ContainerConfig containerConfig = ContainerConfig.builder()
+                    final ContainerConfig.Builder ccBuilder = ContainerConfig.builder()
                             .hostConfig(hostConfig)
                             .image(imageName).exposedPorts(getBindedPorts())
-                            .env("JAVA_OPTS='" + java_opts + "'")
                             //.cmd("/bin/bash")
-                            .cmd("sh", "-c", "while :; do sleep 1; done")
-                            .build();
+                            .cmd("sh", "-c", "while :; do sleep 1; done");
+                    ContainerConfig containerConfig = null;
+                    if (java_opts != null) {
+                        containerConfig = ccBuilder.env("JAVA_OPTS='" + java_opts + "'")
+                                .build();
+                    } else {
+                        containerConfig = ccBuilder.build();
+                    }
                     final ContainerCreation creation = client.createContainer(containerConfig);
                     final String id = creation.id();
 
