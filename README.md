@@ -1,7 +1,7 @@
 # docker-maven-plugin
 
 ## Purpose
-Value addon for spotify docker plugin:
+Enhance of spotify docker plugin:
 - Multiple endpoints support.
 - Lifecycle management
 - Avoid 127 layer limitation when copying dependencies in AUFS
